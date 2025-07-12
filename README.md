@@ -12,6 +12,139 @@ cms-test/
 └── README.md
 ```
 
+# 🏛️ 파일 시스템 아키텍처
+
+### 📁 가상 디렉토리 vs 물리적 저장 분리
+
+이 프로젝트는 **클라우드 스토리지** 방식을 채택하여, 사용자가 보는 가상 디렉토리 구조와 실제 파일 저장 방식을 분리했습니다.
+
+#### 🎭 사용자가 보는 것 (가상 구조)
+
+```
+📁 내 드라이브
+├── 📁 프로젝트
+│   ├── 📄 document.pdf
+│   └── 📁 이미지
+│       ├── 📄 photo1.jpg
+│       └── 📄 photo2.png
+├── 📁 개인
+│   └── 📄 resume.docx
+└── 📄 readme.txt
+```
+
+#### 💾 실제 서버 저장 구조 (물리적)
+
+```
+data/files/
+├── 1/                                    # 사용자 ID
+│   └── 2025/
+│       └── 01/
+│           ├── a27acbb3-826e-4664-877d-5959110441d3.pdf
+│           ├── b3f8c2d1-927f-4b65-988e-6a6b221d4f2e.jpg
+│           ├── c9e4f1a2-038g-4c76-a99f-7b7c332e5g3f.png
+│           ├── d2a5b3c4-149h-4d87-b00g-8c8d443f6h4g.docx
+│           └── e6f9c7d8-25ai-4e98-c11h-9d9e554g7i5h.txt
+├── 2/                                    # 다른 사용자 ID
+│   └── 2025/
+│       └── 01/
+│           └── [다른 사용자의 파일들...]
+└── 3/                                    # 또 다른 사용자 ID
+    └── ...
+```
+
+#### 🗄️ 데이터베이스 구조
+
+**folders 테이블** (가상 디렉토리 구조)
+| id | name | parent_folder_id | owner_id |
+|----|------|------------------|----------|
+| 1 | 프로젝트 | NULL | 1 |
+| 2 | 이미지 | 1 | 1 |
+| 3 | 개인 | NULL | 1 |
+
+**files 테이블** (파일 메타데이터)
+| id | name | parent_folder_id | path_on_disk | owner_id |
+|----|------|------------------|--------------|----------|
+| 1 | document.pdf | 1 | data/files/1/2025/01/a27acbb3-826e-4664-877d-5959110441d3.pdf | 1 |
+| 2 | photo1.jpg | 2 | data/files/1/2025/01/b3f8c2d1-927f-4b65-988e-6a6b221d4f2e.jpg | 1 |
+| 3 | resume.docx | 3 | data/files/1/2025/01/d2a5b3c4-149h-4d87-b00g-8c8d443f6h4g.docx | 1 |
+
+### 🔄 작동 원리
+
+#### 📁 폴더 생성
+1. 사용자가 "프로젝트" 폴더 생성
+2. **물리적 폴더는 생성되지 않음**
+3. DB에만 `parent_folder_id` 관계로 계층 구조 저장
+
+#### 📄 파일 업로드
+1. 사용자가 "프로젝트" 폴더에 `document.pdf` 업로드
+2. **실제 저장**: `UUID + 확장자`로 고유한 파일명 생성
+3. **물리적 경로**: `data/files/{사용자ID}/{년}/{월}/{UUID}.pdf`
+4. **DB 저장**:
+   - `name`: `document.pdf` (사용자가 보는 이름)
+   - `parent_folder_id`: `1` (프로젝트 폴더 ID)
+   - `path_on_disk`: 실제 물리적 경로
+
+#### 📂 폴더 탐색
+1. 사용자가 "프로젝트" 폴더 클릭
+2. `parent_folder_id = 1`인 모든 파일/폴더 조회
+3. 가상 디렉토리 구조로 표시
+
+### ✨ 이 방식의 장점
+
+#### 🚀 **성능 최적화**
+- 물리적 디렉토리 깊이 제한 (OS 성능 이슈 방지)
+- 파일 검색이 DB 인덱스로 빠름
+- 대용량 파일 시스템에서도 안정적
+
+#### 🔒 **보안 강화**
+- 실제 파일 경로가 노출되지 않음
+- UUID로 파일명 추측 불가능
+- 사용자별 물리적 격리
+
+#### 🛠️ **관리 용이성**
+- 파일 중복 제거 가능 (동일 해시 시)
+- 백업/복원 시 메타데이터와 파일 분리 관리
+- 스토리지 마이그레이션 용이
+
+#### 📈 **확장성**
+- 여러 스토리지 서버로 분산 가능
+- CDN 연동 용이
+- 파일 버전 관리 구현 가능
+
+### 🔍 구현 세부사항
+
+#### 파일 업로드 과정
+```python
+# 1. 고유한 파일명 생성
+unique_filename = f"{uuid.uuid4()}{file_extension}"
+
+# 2. 물리적 저장 경로 생성 (년/월별 분류)
+relative_path = Path("data/files") / str(owner_id) / str(now.year) / f"{now.month:02d}"
+file_path = relative_path / unique_filename
+
+# 3. DB에 메타데이터 저장
+new_file = File(
+    name=file.filename,           # 사용자가 보는 이름
+    path_on_disk=str(file_path), # 실제 물리적 경로
+    parent_folder_id=folder_id,   # 가상 폴더 구조
+    owner_id=owner_id
+)
+```
+
+#### 파일 다운로드 과정
+```python
+# 1. DB에서 파일 메타데이터 조회
+file = await db.execute(select(File).where(File.id == file_id))
+
+# 2. 실제 물리적 경로에서 파일 읽기
+file_path = Path(file.path_on_disk)
+
+# 3. 사용자에게는 원본 파일명으로 전송
+return FileResponse(path=file_path, filename=file.name)
+```
+
+이 아키텍처는 **Google Drive, Dropbox, AWS S3** 등 주요 클라우드 스토리지 서비스들이 사용하는 방식과 동일합니다.
+
 ## 🚀 기술 스택
 
 ### Frontend
@@ -124,9 +257,8 @@ npm run build       # 빌드
 
 | Method | Endpoint | 설명 | 인증 |
 |--------|----------|------|------|
-| `GET` | `/users/` | 사용자 목록 조회 | ❌ |
+| `GET` | `/users/` | 전체 사용자 목록 조회(개발용) | ❌ |
 | `POST` | `/users/` | 새 사용자 생성 | ❌ |
-| `PATCH` | `/users/` | 사용자 정보 수정 | ❌ |
 | `POST` | `/login/` | 로그인 (JWT 토큰 발급) | ❌ |
 | `POST` | `/refresh/` | 액세스 토큰 갱신 | ❌ |
 
