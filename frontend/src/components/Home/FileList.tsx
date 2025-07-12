@@ -495,11 +495,11 @@ function FileList() {
                     {draggingItem.name}
                 </div>
             )}
-            <div
+            {/* <div
                 className={`${styles.trash_container} ${isTrashOpen ? styles.trash_container_open : styles.trash_container_closed}`}
             ></div>
             {isTrashOpen && <div>TrashOpen</div>}
-            {!isTrashOpen && <div>TrashClosed</div>}
+            {!isTrashOpen && <div>TrashClosed</div>} */}
         </div>
     )
 }
