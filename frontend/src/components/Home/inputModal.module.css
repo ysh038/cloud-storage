@@ -1,0 +1,59 @@
+.input_modal_wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: opacity 0.3s ease-in-out;
+    z-index: 1000;
+}
+.input_modal_open {
+    opacity: 1;
+}
+.input_modal_closed {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.input_modal_container {
+    width: 300px;
+    height: 200px;
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.input_modal_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.input_modal_body {
+    display: flex;
+    justify-content: center;
+}
+
+.input_modal_footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.input_modal_footer button {
+    width: 100px;
+    height: 30px;
+    border-radius: 5px;
+    border: 1px solid #000;
+    cursor: pointer;
+
+    transition: background-color 0.3s ease-in-out;
+}
+
+.input_modal_footer button:hover {
+    background-color: #b2b2b2;
+}

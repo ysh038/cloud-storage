@@ -1,0 +1,9 @@
+# 포맷팅에서 제외할 파일들
+node_modules
+build
+dist
+public
+*.lock
+.env
+.DS_Store
+*.md
