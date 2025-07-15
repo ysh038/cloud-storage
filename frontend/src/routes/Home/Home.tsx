@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 
 import styles from './Home.module.css'
 import FileList from '../../components/Home/FileList'
+import SideMenu from '../../components/Home/SideMenu'
 
 function Home() {
     const navigate = useNavigate()
@@ -40,6 +41,7 @@ function Home() {
                 )}
             </div>
             <div className={styles.content_container}>
+                <SideMenu />
                 <FileList />
             </div>
         </main>

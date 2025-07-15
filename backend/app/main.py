@@ -5,8 +5,19 @@ from app.database import init_db, test_connection
 from app.routers import user
 from app.routers import file
 from app.routers import folder
+from app.services.cleanup import cleanup_old_trash_files
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 app = FastAPI()
+
+scheduler = AsyncIOScheduler()
+scheduler.add_job(
+    cleanup_old_trash_files,
+    'cron',
+    hour=2,
+    minute=0,
+)
+scheduler.start()
 
 # CORS 미들웨어 추가
 app.add_middleware(
