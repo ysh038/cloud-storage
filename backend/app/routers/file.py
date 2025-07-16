@@ -46,6 +46,9 @@ async def upload_file(
     db: AsyncSession = Depends(get_async_db)
 ):
     try:
+        MAX_FILE_SIZE = 1024 * 1024 * 10 # 10MB
+        CHUNK_SIZE = 8192 # 8KB
+        
         user_id = await get_user_id(authorization, db)
 
         if not user_id:
@@ -56,6 +59,12 @@ async def upload_file(
          # 파일명 검증
         if not file.filename:
             raise HTTPException(status_code=400, detail="Filename is required")
+        
+        if file.size and file.size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024)}MB"
+            )
 
         # 파일 확장자 추출
         file_extension = Path(file.filename).suffix if file.filename else ""
@@ -71,13 +80,22 @@ async def upload_file(
         # 디렉토리 생성
         file_path.parent.mkdir(parents=True, exist_ok=True)
         
+        file_size = 0
         # 파일 저장
         with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
-        
-        # 파일 크기 계산
-        file_size = len(content)
+            while chunk := await file.read(CHUNK_SIZE):
+                buffer.write(chunk)
+                file_size += len(chunk)
+
+                # 실제 파일 크기 체크
+                if file_size > MAX_FILE_SIZE:
+                    buffer.close()
+                    if file_path.exists():
+                        file_path.unlink()
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File too large. Maximum size: {MAX_FILE_SIZE / (1024*1024):.0f}MB"
+                    )
 
         # parent_folder_id 처리 수정
         actual_parent_folder_id = None if parent_folder_id == 0 else parent_folder_id

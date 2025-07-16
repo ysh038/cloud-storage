@@ -105,3 +105,6 @@ alembic/versions/*.py
 # Temporary files
 tmp/
 temp/
+
+# data directory
+data/

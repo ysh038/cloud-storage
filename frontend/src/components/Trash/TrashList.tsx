@@ -21,6 +21,7 @@ function TrashList() {
                 <div className={styles.trash_list_header_item}>Name</div>
                 <div className={styles.trash_list_header_item}>Size</div>
                 <div className={styles.trash_list_header_item}>Deleted At</div>
+                <div className={styles.trash_list_header_item}>Status</div>
             </div>
             <div className={styles.trash_list_content}>
                 {data?.map((item: ITrashItem) => (
