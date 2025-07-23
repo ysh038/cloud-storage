@@ -15,6 +15,7 @@ from fastapi import Header
 from app.model.user import User
 from fastapi.responses import FileResponse
 import mimetypes
+from app.utilities.auth import get_user_id
 
 router = APIRouter()
 
@@ -24,21 +25,9 @@ async def get_files(
     authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_async_db)
 ):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid token format")
-    
-    token = authorization.replace("Bearer ", "")
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
-    payload_user_email = payload.get("email")
-    query = select(User).where(User.email == payload_user_email)
-    result = await db.execute(query)
-    user = result.scalars().first()
-    user_id = user.id
+    user_id = await get_user_id(authorization, db)
 
-    file_query = select(File).where(File.owner_id == user_id)
+    file_query = select(File).where(File.owner_id == user_id, File.is_deleted == False)
     
     if parent_folder_id == 0 or parent_folder_id is None:  # 0을 루트 폴더로 사용
         file_query = file_query.where(File.parent_folder_id.is_(None))
@@ -57,27 +46,25 @@ async def upload_file(
     db: AsyncSession = Depends(get_async_db)
 ):
     try:
-        if not authorization or not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Invalid token format")
-    
-        token = authorization.replace("Bearer ", "")
-        payload = verify_token(token)
-        if not payload:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        MAX_FILE_SIZE = 1024 * 1024 * 10 # 10MB
+        CHUNK_SIZE = 8192 # 8KB
         
-        payload_user_email = payload.get("email")
-        query = select(User).where(User.email == payload_user_email)
-        result = await db.execute(query)
-        user = result.scalars().first()
+        user_id = await get_user_id(authorization, db)
 
-        if not user:
+        if not user_id:
             raise HTTPException(status_code=404, detail="User not found")
         
-        owner_id = user.id
+        owner_id = user_id
 
          # 파일명 검증
         if not file.filename:
             raise HTTPException(status_code=400, detail="Filename is required")
+        
+        if file.size and file.size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024)}MB"
+            )
 
         # 파일 확장자 추출
         file_extension = Path(file.filename).suffix if file.filename else ""
@@ -93,13 +80,22 @@ async def upload_file(
         # 디렉토리 생성
         file_path.parent.mkdir(parents=True, exist_ok=True)
         
+        file_size = 0
         # 파일 저장
         with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
-        
-        # 파일 크기 계산
-        file_size = len(content)
+            while chunk := await file.read(CHUNK_SIZE):
+                buffer.write(chunk)
+                file_size += len(chunk)
+
+                # 실제 파일 크기 체크
+                if file_size > MAX_FILE_SIZE:
+                    buffer.close()
+                    if file_path.exists():
+                        file_path.unlink()
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File too large. Maximum size: {MAX_FILE_SIZE / (1024*1024):.0f}MB"
+                    )
 
         # parent_folder_id 처리 수정
         actual_parent_folder_id = None if parent_folder_id == 0 else parent_folder_id
@@ -187,24 +183,13 @@ async def update_file(
     authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_async_db)
 ):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid token format")
-    
-    token = authorization.replace("Bearer ", "")
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
-    payload_user_email = payload.get("email")
-    query = select(User).where(User.email == payload_user_email)
-    result = await db.execute(query)
-    user = result.scalars().first()
+    user_id = await get_user_id(authorization, db)
 
     query = select(File).where(File.id == file_id)
     result = await db.execute(query)
     file = result.scalars().first()
 
-    if file.owner_id != user.id:
+    if file.owner_id != user_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
     
     if not file:
@@ -240,22 +225,7 @@ async def delete_file(
     authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_async_db)
 ):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid token format")
-    
-    token = authorization.replace("Bearer ", "")
-
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    # 사용자 확인
-    payload_user_email = payload.get("email")
-    user_query = select(User).where(User.email == payload_user_email)
-    user_result = await db.execute(user_query)
-    user = user_result.scalars().first()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    user_id = await get_user_id(authorization, db)
     
     # 파일 조회
     file_query = select(File).where(File.id == file_id)
@@ -266,8 +236,76 @@ async def delete_file(
         raise HTTPException(status_code=404, detail="File not found")
     
     # 파일 소유자 확인
-    if file.owner_id != user.id:
+    if file.owner_id != user_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # 실제 파일 삭제
+    # file_path = Path(file.path_on_disk)
+    # if file_path.exists():
+    #     try:
+    #         file_path.unlink()
+    #     except Exception as e:
+    #         print(f"Failed to delete file from disk: {e}")
+
+    # 실제 파일 삭제 대신 soft delete 처리
+    file.is_deleted = True
+    file.deleted_at = datetime.now()
+    
+    # DB에서 파일 정보 삭제
+    # await db.delete(file)
+    await db.commit()
+    
+@router.get("/files/trash")
+async def get_trash_files(
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_async_db)
+):
+    user_id = await get_user_id(authorization, db)
+
+    trash_query = select(File).where(File.owner_id == user_id, File.is_deleted == True).order_by(File.deleted_at.desc())
+
+    result = await db.execute(trash_query)
+    trash_files = result.scalars().all()
+    return trash_files
+
+@router.post("/files/{file_id}/restore")
+async def restore_file(
+    file_id: int,
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_async_db)
+):
+    user_id = await get_user_id(authorization, db)
+
+    file_query = select(File).where(File.id == file_id, File.owner_id == user_id, File.is_deleted == True)
+    result = await db.execute(file_query)
+    file = result.scalars().first()
+
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    file.is_deleted = False
+    file.deleted_at = None
+    await db.commit()
+
+@router.delete("/files/{file_id}/permanent")
+async def delete_file_permanent(
+    file_id: int,
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_async_db)
+):
+    user_id = await get_user_id(authorization, db)
+
+    # 휴지통에서 파일 찾기
+    file_query = select(File).where(
+        File.id == file_id, 
+        File.is_deleted == True,
+        File.owner_id == user_id
+    )
+    result = await db.execute(file_query)
+    file = result.scalars().first()
+    
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found in trash")
     
     # 실제 파일 삭제
     file_path = Path(file.path_on_disk)
@@ -280,4 +318,3 @@ async def delete_file(
     # DB에서 파일 정보 삭제
     await db.delete(file)
     await db.commit()
-    

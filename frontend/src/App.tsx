@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 
-import { Home, Login, SignUp } from './routes'
+import { Home, Login, SignUp, Trash } from './routes'
 
 function App() {
     return (
@@ -8,6 +8,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/trash" element={<Trash />} />
         </Routes>
     )
 }

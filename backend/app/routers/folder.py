@@ -38,7 +38,7 @@ async def get_folders(
     user_id = user.id
 
     # 새로운 폴더 쿼리 생성
-    folder_query = select(Folder).where(Folder.owner_id == user_id)
+    folder_query = select(Folder).where(Folder.owner_id == user_id).order_by(Folder.created_at.desc())
 
     if current_folder_id == 0 or current_folder_id is None:  # 0을 루트 폴더로 사용
         folder_query = folder_query.where(Folder.parent_folder_id.is_(None))

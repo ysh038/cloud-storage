@@ -8,13 +8,14 @@ import os
 
 # 환경변수 또는 기본값
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://myapp_user:myapp_password@localhost:5432/myapp_db"
+    "DATABASE_URL", 
+    "postgresql://myapp_user:myapp_password@localhost:5432/myapp_db"
 )
 
 # 비동기 버전 (추천)
 ASYNC_DATABASE_URL = os.getenv(
     "ASYNC_DATABASE_URL",
-    "postgresql+asyncpg://myapp_user:myapp_password@localhost:5432/myapp_db",
+    "postgresql+asyncpg://myapp_user:myapp_password@localhost:5432/myapp_db"
 )
 
 # 동기 엔진 (마이그레이션용)
@@ -30,7 +31,6 @@ AsyncSessionLocal = sessionmaker(
 # Base 클래스 (모델 정의용)
 Base = declarative_base()
 
-
 # 의존성 주입용 함수 (동기)
 def get_db():
     db = SessionLocal()
@@ -39,18 +39,15 @@ def get_db():
     finally:
         db.close()
 
-
 # 의존성 주입용 함수 (비동기)
 async def get_async_db():
     async with AsyncSessionLocal() as session:
         yield session
 
-
 # 데이터베이스 초기화
 async def init_db():
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
 
 # 연결 테스트 함수
 async def test_connection():
