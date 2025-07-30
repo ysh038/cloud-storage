@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import apiClient from '../../utils/apiClient'
 
-const getFile = async (parentFolderId: number) => {
+const getFile = async (parentFolderId: string) => {
     const response = await apiClient.get(
         `http://localhost:8000/files/?parent_folder_id=${parentFolderId}`,
     )
@@ -14,8 +14,8 @@ export const useGetFile = () => {
     const [searchParams] = useSearchParams()
 
     const parentFolderId = searchParams.get('folder')
-        ? parseInt(searchParams.get('folder')!)
-        : 0
+        ? searchParams.get('folder')!
+        : '0'
 
     return useQuery({
         queryKey: ['file', parentFolderId],

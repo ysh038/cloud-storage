@@ -3,9 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../utils/apiClient'
 
 interface IPatchFolderParams {
-    folderId: number
+    folderId: string
     newFolderName: string | null
-    parentFolderId: number | null
+    parentFolderId: string | null
 }
 const patchFolder = async (params: IPatchFolderParams) => {
     try {

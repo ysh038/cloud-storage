@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import apiClient from '../../utils/apiClient'
 
-const deleteFile = async (fileId: number) => {
+const deleteFile = async (fileId: string) => {
     const response = await apiClient.delete(
         `http://localhost:8000/files/${fileId}/`,
     )

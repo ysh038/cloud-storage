@@ -3,9 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../utils/apiClient'
 
 interface IPatchFileParams {
-    fileId: number
+    fileId: string
     newFileName: string | null
-    parentFolderId: number | null
+    parentFolderId: string | null
 }
 const patchFile = async (params: IPatchFileParams) => {
     try {

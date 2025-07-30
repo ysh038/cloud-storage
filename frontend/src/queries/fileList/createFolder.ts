@@ -4,7 +4,7 @@ import apiClient from '../../utils/apiClient'
 
 interface IFolderCreate {
     name: string
-    parent_folder_id: number
+    parent_folder_id: string | null
 }
 
 const createFolder = async (folder: IFolderCreate) => {

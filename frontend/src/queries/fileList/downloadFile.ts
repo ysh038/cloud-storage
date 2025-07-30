@@ -4,11 +4,11 @@ import apiClient from '../../utils/apiClient'
 
 export const useDownloadFile = () => {
     return useMutation({
-        mutationFn: (fileId: number) => downloadFile(fileId),
+        mutationFn: (fileId: string) => downloadFile(fileId),
     })
 }
 
-export const downloadFile = async (fileId: number) => {
+export const downloadFile = async (fileId: string) => {
     const timestamp = Date.now().toString()
     const response = await apiClient.get(
         `http://localhost:8000/files/download/${fileId}?t=${timestamp}`,

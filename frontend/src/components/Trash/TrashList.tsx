@@ -4,7 +4,7 @@ import { useGetTrash } from '../../queries/trash/getTrash'
 import { useRestoreFile } from '../../queries/trash/restorefile'
 
 interface ITrashItem {
-    id: number
+    _id: number
     name: string
     file_size: number
     deleted_at: string
@@ -24,8 +24,8 @@ function TrashList() {
                 <div className={styles.trash_list_header_item}>Status</div>
             </div>
             <div className={styles.trash_list_content}>
-                {data?.map((item: ITrashItem) => (
-                    <div className={styles.trash_list_item} key={item.id}>
+                {data?.files?.map((item: ITrashItem) => (
+                    <div className={styles.trash_list_item} key={item._id}>
                         <div className={styles.trash_list_item_name}>
                             {item.name}
                         </div>
@@ -38,14 +38,14 @@ function TrashList() {
                         <div className={styles.trash_list_item_button}>
                             <button
                                 onClick={() => {
-                                    restoreFileMutation.mutate(item.id)
+                                    restoreFileMutation.mutate(item._id)
                                 }}
                             >
                                 🔄 Restore
                             </button>
                             <button
                                 onClick={() => {
-                                    deletePermanentMutation.mutate(item.id)
+                                    deletePermanentMutation.mutate(item._id)
                                 }}
                             >
                                 ❌ Delete Permanent

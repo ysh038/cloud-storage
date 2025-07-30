@@ -2,9 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import apiClient from '../../utils/apiClient'
 
-const deleteFolder = async (folderId: number) => {
+const deleteFolder = async (folderId: string) => {
     const response = await apiClient.delete(
-        `http://localhost:8000/folders/${folderId}/`,
+        `http://localhost:8000/folders/${folderId}`,
     )
     return response.data
 }

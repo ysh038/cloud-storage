@@ -17,6 +17,7 @@ const signup = async (signupData: ISignupData) => {
             email: signupData.email,
             password: hashedPassword,
             name: signupData.name,
+            created_at: new Date(),
         })
         return response.data
     } catch (error) {

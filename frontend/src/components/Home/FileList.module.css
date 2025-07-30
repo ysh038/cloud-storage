@@ -1,4 +1,5 @@
 .file_list {
+    position: relative;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -46,7 +47,6 @@
 }
 .file_list_item,
 .folder_list_item {
-    cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -55,22 +55,16 @@
     padding: 0 10px;;
     border-bottom: 1px solid #00000070;
 }
-.folder_list_item:hover {
+.folder_list_item:hover, .file_list_item:hover {
     background-color: #f0f0f0;
 }
-.file_list_item:hover {
-    background-color: #7ee7ff;
+.folder_list_item.active {
+    background-color: #cfcfcf;
 }
-.file_list_folder_list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.file_list_item.active {
+    background-color: #80fdff;
 }
-.file_list_folder_item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+
 .context_menu {
     background: white;
     border: 1px solid #dadce0;
@@ -152,4 +146,85 @@
     max-height: 0;
     pointer-events: none;
     padding: 0;
+}
+
+/* FileList.module.css에 추가 */
+.retry_notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #fff;
+    border: 1px solid #ff6b6b;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-width: 400px;
+}
+.retry_content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.retry_info {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+.error_icon {
+    font-size: 20px;
+}
+.error_title {
+    font-weight: bold;
+    color: #d32f2f;
+    margin: 0 0 4px 0;
+}
+.error_filename {
+    font-weight: 500;
+    margin: 0 0 4px 0;
+}
+.error_message {
+    color: #666;
+    font-size: 12px;
+    margin: 0;
+}
+.retry_buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.retry_button {
+    background: #2196f3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.retry_button:hover {
+    background: #1976d2;
+}
+.retry_button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+.close_button {
+    background: transparent;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.upload_success {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 200px;
+
+    background: #fff;
+    border: 1px solid #007bff;
+    border-radius: 8px;
+    padding: 16px;
+    z-index: 1000;
 }
